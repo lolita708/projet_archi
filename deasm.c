@@ -20,8 +20,9 @@
 
 
 unsigned pgm[]={ 0x24040006,0x0c100006,0x00022021,0x24020001,0x0000000c,0x1000ffff,0x24020001,0xafa40000,\
-0x23bdfffc,0x00820018,0x00001012,0x2084ffff,0x1080fffa,0x23bdfffc,0x8fa40000,0x03e00008};
-
+	0x23bdfffc,0x00820018,0x00001012,0x2084ffff,0x1080fffa,0x23bdfffc,0x8fa40000,0x03e00008};
+unsigned pgm2[] = {0X2044000a,0x0c100007,0x00402021,0x20020001,0x0000000c,0x2402000a,0x0000000c,0xafa40000,\
+	0x23bdfffc,0x03bd1026,0x00441020,0x2084ffff,0x1480fffd,0x23bd0004,0x8fa40000,0x03e00008} ;
 
 int test(){
 	unsigned resOK=0,resErreur=0;
@@ -40,29 +41,29 @@ int test(){
 	res= getRegName(31,forTest);
 	testSTREQ(forTest,"$ra");
 	printf("%s","---------getR?------------\n");
-	res=getRs(8<<(32-6-5),&val,forTest);
+	res=getRs(0x011f2020,&val,forTest);
 	testSTREQ(forTest,"$t0");
 	testEQ(val,8);
-	res=getRt(31<<(32-6-5-5),&val,forTest);
+	res=getRt(0x011f2020,&val,forTest);
 	testSTREQ(forTest,"$ra");
 	testEQ(val,31);
-	res=getRd(4<<(32-6-5-5-5),&val,forTest);
+	res=getRd(0x011f2020,&val,forTest);
 	testSTREQ(forTest,"$a0");
 	testEQ(val,4);
 	printf("%s","---------getImm? ?-----------\n");
-	getImmNs16(0xFFFE,&val,forTest);
+	getImmNs16(0x3128FFFE,&val,forTest);
 	testSTREQ(forTest,"0xFFFE");
 	testEQ(val,0xFFFE);
-	getImmS16(0xFFFE,&Nf,forTest);
+	getImmS16(0x3421FFFE,&Nf,forTest);
 	testSTREQ(forTest,"-2");
 	testEQ(Nf,-2);
-	getImmS16Hexa(0xFFFE,&Nf,forTest);
+	getImmS16Hexa(0x3421FFFE,&Nf,forTest);
 	testSTREQ(forTest,"0xFFFFFFFE");
 	testEQ(Nf,-2);
 	getImmNs26(0xFC100003,&val,forTest);
 	testSTREQ(forTest,"0x40000C");
 	testEQ(val,0x40000C);
-	getShamt(0xFFF630,&val,forTest);
+	getShamt(0x00094600,&val,forTest);
 	testSTREQ(forTest,"24");	
 	printf("%s","------getInstructionName-----\n");
 	res=getInstructionName(0x0000000c,&Co,&Nf,forTest);
@@ -141,6 +142,12 @@ int test(){
 }
 
 int main(){
-	return test();
+	//test();
+    char forTest[1000];
+	decodePgm(pgm2,16,forTest);
+	printf("%s",forTest);
+    return 0;
+	
+	
 }
 
