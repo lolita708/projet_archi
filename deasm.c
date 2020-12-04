@@ -142,10 +142,10 @@ int test(){
 }
 
 int main(){
-	//test();
-    char forTest[1000];
-	decodePgm(pgm2,16,forTest);
-	printf("%s",forTest);
+	test();
+    // char forTest[1000];
+	// decodePgm(pgm2,16,forTest);
+	// printf("%s",forTest);
     return 0;
 	
 	

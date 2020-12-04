@@ -1,11 +1,66 @@
 #include "deasm.h"
 #include <stdio.h>
-#include <string.h>
+char reg[32*4]="$0\0$at\0$v0\0$v1\0$a0\0$a1\0$a2\0$a3\0$t0\0$t1\0$t2\0$t3\0$t4\0$t5\0$t6\0$t7\0"\
+                    "$s0\0$s1\0$s2\0$s3\0$s4\0$s5\0$s6\0$s7\0$t8\0$t9\0$k0\0$k1\0$gp\0$sp\0$fp\0$ra\0";
+
+char tab[16]="0123456789ABCDEF";
+char nomImm[64*8]= { "X\0X\0X\0jal \0beq \0bne \0blez \0bgtz \0"\
+                    "addi \0addiu \0slti \0sltiu \0andi \0ori \0xori \0lui \0"\
+                    "X\0X\0X\0X\0X\0X\0X\0X\0X\0X\0X\0X\0X\0X\0X\0X\0"\
+                    "lb \0X\0X\0lw \0lbu \0X\0X\0X\0"\
+                    "sb \0X\0X\0sw \0X\0X\0X\0X\0"\
+                    "X\0X\0X\0X\0X\0X\0X\0X\0"\
+                    "X\0X\0X\0X\0X\0X\0X\0X\0"};  
+
+char nom3reg[64*8]= {"sll \0X\0srl \0sra \0sllv \0X\0srlv \0srav \0"\
+                    "jr \0X\0X\0X\0syscall\0X\0X\0X\0"\
+                    "mfhi \0X\0mflo \0X\0X\0X\0X\0X\0"\
+                    "mult \0multu \0div \0divu \0X\0X\0X\0X\0"\
+                    "add \0addu \0sub \0subu \0and \0or \0xor \0nor \0"\
+                    "X\0X\0slt \0sltu \0X\0X\0X\0X\0"\
+                    "X\0X\0X\0X\0X\0X\0X\0X\0"\
+                    "X\0X\0X\0X\0X\0X\0X\0X\0"};
+char non []= {"#Instruction inconnue"};
+char virgule []= {","};
+char p1 []= {"("};
+char p2 []= {")"};  
+char saut []={"\n"};
+
+
+
+// int str_len(const char *str) {
+//   int size =0; 
+//   while (str[size] !='\0'){  
+//     size ++;
+//   }   
+//   return size;
+// }
+
+void strCpy(char *src,char *dest){
+  unsigned i;
+  i =0;
+  while(src[i] != '\0'){
+    dest[i] =src[i];
+    ++i;
+  }
+  dest[i] ='\0';
+}
+
+void strAdd(char *src,char *dest){
+   while (*dest != '\0'){
+       dest =dest+1;
+   }
+   while (*src != '\0'){
+       *dest = *src;
+       dest = dest+1;
+       src = src+1;
+   }
+   *dest = '\0';
+}
 unsigned getRegName(unsigned num,char* name){
     unsigned compteur = 0;
     unsigned indice =0;
-    char reg[32*4]={"$0\0$at\0$v0\0$v1\0$a0\0$a1\0$a2\0$a3\0$t0\0$t1\0$t2\0$t3\0$t4\0$t5\0$t6\0$t7\0"\
-                    "$s0\0$s1\0$s2\0$s3\0$s4\0$s5\0$s6\0$s7\0$t8\0$t9\0$k0\0$k1\0$gp\0$sp\0$fp\0$ra\0"};
+    
     if (num <0 || num > 31){
         return 1;
     }
@@ -18,6 +73,8 @@ unsigned getRegName(unsigned num,char* name){
     strCpy(&reg[indice],name);
     return 0;    
 }
+
+
 
 unsigned getRs(unsigned codeInst,unsigned *numRs, char* name){    
     *numRs = (codeInst <<6) >>(5+5+5+6+6);
@@ -42,81 +99,55 @@ char forDigit(unsigned nombre){
     }
 }
 
-//utoha non signé
+
+
 void utoha(unsigned nbr,char *chaine){
-    int compteur ;
-    *chaine = '0';
-    chaine ++;
-    *chaine = 'x';
-    chaine++;
-    for(compteur =0;compteur <8; ++compteur){
-        if(forDigit(nbr>>28)!= '0'){
-            *chaine =forDigit(nbr>>28);
-            chaine ++;
+    *chaine='0';
+    chaine=chaine+1;
+    *chaine='x';
+    chaine=chaine+1;
+    unsigned pos=8;
+    if(nbr==0){
+        pos=1;
+    }else{
+        while((nbr>>28)==0){
+            nbr=nbr<<4;
+            pos=pos-1;
         }
-        nbr = nbr<<4;        
     }
-    *chaine = '\0' ;
+    do{
+        *chaine=forDigit(nbr>>28);;
+        nbr=nbr<<4;
+        chaine=chaine+1;
+        pos=pos-1;
+    }while(pos!=0);
+    *chaine='\0';
 }
 
-
-void toString(int nombre,char *res,int base){    
-    char tab[16]="0123456789ABCDEF";
-    if (nombre == 0){
-        *res=tab[nombre];
-        *(res+1)= '\0';
-        return ;
-    }
-    int pos=0;
-    int nb1;
-    if(base ==16){
-        *res = '0';
-        *(res+1)='x';
-        pos = 2;
-    }
-    
-    if(nombre >0){
-        nombre = -nombre;
-    }else {
-        *(res+pos) = '-';
-        pos++;
-    }
-    nb1 =nombre;
-    do{
-        nb1 =nb1/base ;
-        pos ++;
-
-    }while(nb1!=0);
-    *(res+pos)= '\0';
-
-    do{
-        pos--;
-        *(res+pos)=tab[-(nombre%base)];
-        nombre = nombre / base;
-    }while (nombre!=nb1);
-    
-}   
 
 void itoa(int val,char *chaine){
-    unsigned nombre1=val;
+    int nombre1;
+    if(val<0){
+        *chaine='-';
+        chaine=chaine+1;
+        val=-val;
+    }    
+    nombre1=val;
     do{
-        nombre1 =nombre1/10;
-        chaine ++;
-    }while(nombre1!=0) ;    
-    *chaine=(char)0;    
+        nombre1=nombre1/10;
+        chaine=chaine+1;
+    }while(nombre1!=0);
+    *chaine='\0';
     do{
-        chaine --;
-        *chaine =forDigit(val%10);
-        val =val/10;
-    }while(nombre1!=val) ;
-   
+        chaine=chaine-1;
+        *chaine = forDigit(val%10);
+        val=val/10;
+    }while(val!=0);
 }
-
-
 void getImmS16(unsigned codeInst,int *imms,char* chaine){
     int code = codeInst;
     *imms =(code << 16)>>16;
-    toString(*imms,chaine, 10);
+    itoa(*imms,chaine);
     
 }
 
@@ -128,22 +159,20 @@ void getImmS16Hexa(unsigned codeInst,int *imms,char* chaine){
     }else{
         *imms = *imms | 0xFFFF0000;
     }
-    printf("%d\n",*imms);
+    
     utoha(*imms,chaine);
 
 }
-
-
 void getImmNs16(unsigned codeInst,unsigned *immNs,char* chaine){
     unsigned code = (codeInst<<16)>>16;
     *immNs = code;
-    toString(code,chaine,16);
+    utoha(code,chaine);
     
 }
 void getImmNs26(unsigned codeInst,unsigned *immNs,char* chaine){
     unsigned code = ((codeInst<<6)>>6)<<2;
     *immNs = code;
-    toString(code,chaine,16);
+    utoha(code,chaine);
 }
 
 void getShamt(unsigned codeInst,unsigned *shamt,char *chaine){
@@ -152,54 +181,11 @@ void getShamt(unsigned codeInst,unsigned *shamt,char *chaine){
 }
 
 
-
-
-void strCpy(char *src,char *dest){
-    int taille = strlen(src);
-    dest[taille]='\0';  
-
-    int i = 0;
-    while (i< taille){
-        dest[i]= src[i];
-        i++;
-    }
-}
-
-void strAdd(char *src,char *dest){
-    int taille_dest = strlen(dest);
-    int taille_src = strlen(src);
-    int taille_finale =taille_dest+taille_src;
-    
-    dest[taille_finale] = '\0';
-    size_t i = taille_dest ;
-    int j = 0;
-    while (i< taille_finale){
-        dest[i]= src[j];
-        i++;
-        j++;
-    } 
-}
 unsigned getInstructionName(unsigned codeInst,unsigned *Co,int *Nf,char *name){
     *Co = codeInst >> (5+5+5+5+6);
     *Nf = (codeInst<<(5+5+5+5+6))>>(5+5+5+5+6);
     int compteur =0;
-    int indice =0;
-    char nomImm[64*8]= { "X\0X\0X\0jal \0beq \0bne \0blez \0bgtz \0"\
-                    "addi \0addiu \0slti \0sltiu \0andi \0ori \0xori \0lui \0"\
-                    "X\0X\0X\0X\0X\0X\0X\0X\0X\0X\0X\0X\0X\0X\0X\0X\0"\
-                    "lb \0X\0X\0lw \0lbu \0X\0X\0X\0"\
-                    "sb \0X\0X\0sw \0X\0X\0X\0X\0"\
-                    "X\0X\0X\0X\0X\0X\0X\0X\0"\
-                    "X\0X\0X\0X\0X\0X\0X\0X\0"};  
-
-    char nom3reg[64*8]= {"sll \0X\0srl \0sra \0sllv \0X\0srlv \0srav \0"\
-                    "jr \0X\0X\0X\0syscall\0X\0X\0X\0"\
-                    "mfhi \0X\0mflo \0X\0X\0X\0X\0X\0"\
-                    "mult \0multu \0div \0divu \0X\0X\0X\0X\0"\
-                    "add \0addu \0sub \0subu \0and \0or \0xor \0nor \0"\
-                    "X\0X\0slt \0sltu \0X\0X\0X\0X\0"\
-                    "X\0X\0X\0X\0X\0X\0X\0X\0"\
-                    "X\0X\0X\0X\0X\0X\0X\0X\0"};
+    int indice =0;   
 
     if (*Co == 0){
         while (compteur != *Nf ){
@@ -221,22 +207,23 @@ unsigned getInstructionName(unsigned codeInst,unsigned *Co,int *Nf,char *name){
     }
     
     if(name[0]=='X'){
-        char non []= {"#Instruction inconnue"};
+        
         strCpy(non,name);
         return 1;
     }
     return 0;
 }
+
 unsigned decodeInstruction(unsigned codeInst,char *inst){
+    char name [1000];
+
     inst[0]='\0';
     unsigned co;
     int nf;
-    char name [1000];
+    
     int im=0;
     unsigned imm=0;
-    char virgule []= {","};
-    char p1 []= {"("};
-    char p2 []= {")"};    
+      
     unsigned valide  =getInstructionName(codeInst,&co,&nf,name);
     strAdd(name,inst);
     if(co == 3){
@@ -349,12 +336,48 @@ unsigned decodeInstruction(unsigned codeInst,char *inst){
 }
 
 void decodePgm(unsigned *pgm,unsigned taille,char *decode){
-    decode[0]= '\0';
-    char name [1000];
-    char saut []={"\n"};
+    char name2 [1000];
+    decode[0]= '\0';    
     for(int i = 0 ;i<taille;++i){
-        decodeInstruction(pgm[i],name);
-        strAdd(name,decode);
+        decodeInstruction(pgm[i],name2);
+        strAdd(name2,decode);
         strAdd(saut,decode);
     }
 }
+
+//-fomit-frame-pointer//-O1 -fno-delayed-branch
+
+/*main:
+        addiu   $sp,$sp,-1032
+        sw      $31,1028($sp)
+        addiu   $2,$sp,24
+        move    $6,$2
+        li      $5,16                 # 0x10
+        lui     $2,%hi(pgm)
+        addiu   $4,$2,%lo(pgm)
+        jal     decodePgm
+        
+
+        move    $2,$0
+        lw      $31,1028($sp)
+        addiu   $sp,$sp,1032
+        j       $31
+  
+  pgm:
+        .word   604241926
+        .word   202375174
+        .word   139297
+        .word   604110849
+        .word   12
+        .word   268500991
+        .word   604110849
+        .word   -1348206592
+        .word   599654396
+        .word   8519704
+        .word   4114
+        .word   545587199
+        .word   276889594
+        .word   599654396
+        .word   -1885077504
+        .word   65011720
+        */
